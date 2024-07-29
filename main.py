@@ -7,7 +7,6 @@ class ProcessController:
         self.max_proc = 1
         self.task_queue = Queue()
         self.active_processes = []
-        self.max_exec_time = None
         self.manage_thread = None
         self.info_thread = None
 
@@ -15,9 +14,8 @@ class ProcessController:
         self.max_proc = n
 
     def start(self, tasks, max_exec_time):
-        self.max_exec_time = max_exec_time
         for task in tasks:
-            self.task_queue.put(task)
+            self.task_queue.put((task[0], task[1], max_exec_time))
 
         if self.manage_thread is None or not self.manage_thread.is_alive():
             self.manage_thread = Thread(target=self._manage_tasks)
@@ -34,8 +32,8 @@ class ProcessController:
 
     def _start_tasks(self):
         while not self.task_queue.empty() and len(self.active_processes) < self.max_proc:
-            func, args = self.task_queue.get()
-            process = Process(target=self._run_task, args=(func, args, self.max_exec_time))
+            func, args, max_exec_time = self.task_queue.get()
+            process = Process(target=self._run_task, args=(func, args, max_exec_time))
             process.start()
             self.active_processes.append(process)
 
@@ -72,7 +70,6 @@ class ProcessController:
             print(f"Tasks left in queue: {self.wait_count()}")
             print(f"Tasks currently running: {self.alive_count()}")
 
-
 # Пример использования
 def example_task(duration):
     print(f"Process {current_process().name} started, will run for {duration} seconds")
@@ -100,8 +97,8 @@ if __name__ == "__main__":
     ]
 
     controller.start(tasks1, max_exec_time=15)
-    controller.start(tasks2, max_exec_time=15)
-    controller.start(tasks1, max_exec_time=15)
+    controller.start(tasks2, max_exec_time=6)
+    controller.start(tasks1, max_exec_time=4)
     controller.wait()
 
     print("All tasks are completed.")
